@@ -10,27 +10,114 @@
 </body>
 
 <template name="world">
+  <!-- space background element (pure CSS / image) -->
+  <div id="space" aria-hidden="true"></div>
+
+  <div id="hud" style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.5); color: #fff; padding: 8px; border-radius: 6px; font-family: sans-serif;">
+    <div id="score">Score: <span class="hud-score">{{score}}</span></div>
+    <div id="timer">Time: <span class="hud-time">{{timeLeft}}</span></div>
+    <button id="start" class="start-game">Start</button>
+    <button id="stop" class="stop-game" style="margin-left:8px">Stop</button>
+  </div>
+
+  {{#if showPopup}}
+  <div id="end-popup" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-inner">
+      <h2>Game Over</h2>
+      <p>Your score: <strong>{{finalScore}}</strong></p>
+
+      <div class="submit-row">
+        <input type="text" class="score-name" placeholder="Enter your name" maxlength="40" />
+        <button class="submit-score">Submit</button>
+        <button class="close-popup">Close</button>
+      </div>
+
+      <h3>Leaderboard</h3>
+      <div class="leaderboard">
+        {{#each topScores}}
+          <div class="leader-item">
+            <span class="leader-name">{{name}}</span>
+            <span class="leader-score">{{score}}</span>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
   <x3d>
     <scene>
-      <!-- Floor -->
-      <transform id="floor">
-        <shape>
+      <!-- Black hole (inner black sphere + outer glow + accretion disk + lensing rings) -->
+      <transform id="blackhole" class="blackhole" translation="0 0 0">
+        <!-- inner core: pure black -->
+        <shape class="blackhole-core">
           <appearance>
-            <material diffuseColor="#4A9"></material>
+            <material diffuseColor="0 0 0" specularColor="0 0 0" emissiveColor="0 0 0"></material>
           </appearance>
-          <plane center='0,0,-0.5' size="50 50"></plane>
+          <sphere radius="0.8"></sphere>
         </shape>
+
+        <!-- outer glow: semi-transparent emissive white sphere -->
+        <shape id="blackhole-glow" class="blackhole-glow">
+          <appearance>
+            <material diffuseColor="1 1 1" emissiveColor="1 1 1" transparency="0.85"></material>
+          </appearance>
+          <sphere radius="1.6"></sphere>
+        </shape>
+
+        <!-- accretion disk (several layered, different colors & opacities) -->
+        <!-- inner hot ring (fast-rotating, bright) -->
+        <transform id="bh-disk-inner" class="blackhole-disk" rotation="1 0 0 1.5708" translation="0 0 0">
+          <shape>
+            <appearance>
+              <material emissiveColor="1 0.6 0.1" transparency="0.4"></material>
+            </appearance>
+            <!-- thin cylinder used as flat disk -->
+            <cylinder radius="1.1" height="0.06"></cylinder>
+          </shape>
+        </transform>
+
+        <!-- middle disk (orange / red) -->
+        <transform id="bh-disk-mid" class="blackhole-disk" rotation="1 0 0 1.5708" translation="0 0 0">
+          <shape>
+            <appearance>
+              <material emissiveColor="0.9 0.3 0.05" transparency="0.55"></material>
+            </appearance>
+            <cylinder radius="1.8" height="0.08"></cylinder>
+          </shape>
+        </transform>
+
+        <!-- outer cooler disk (bluish halo) -->
+        <transform id="bh-disk-outer" class="blackhole-disk" rotation="1 0 0 1.5708" translation="0 0 0">
+          <shape>
+            <appearance>
+              <material emissiveColor="0.4 0.6 1" transparency="0.7"></material>
+            </appearance>
+            <cylinder radius="3.0" height="0.06"></cylinder>
+          </shape>
+        </transform>
+
+        <!-- thin lensing ring (bright thin cylinder) -->
+        <transform id="bh-lens" class="blackhole-lens" rotation="1 0 0 1.5708" translation="0 0 0">
+          <shape>
+            <appearance>
+              <material emissiveColor="1 1 1" transparency="0.8"></material>
+            </appearance>
+            <cylinder radius="1.95" height="0.02"></cylinder>
+          </shape>
+        </transform>
       </transform>
 
-      <!-- Cube -->
-      <transform translation="0 0 0">
-        <shape>
-          <appearance>
-            <material diffuseColor="1 0 0"></material>
-          </appearance>
-          <box size="1 1 1"></box>
-        </shape>
-      </transform>
+      {{#each targets}}
+        <transform id="target-{{_id}}" class="target" translation="{{x}} {{y}} {{z}}">
+          <shape>
+            <appearance>
+              <material diffuseColor="{{color}}"></material>
+            </appearance>
+            <sphere radius="{{radius}}"></sphere>
+          </shape>
+        </transform>
+      {{/each}}
     </scene>
   </x3d>
 </template>

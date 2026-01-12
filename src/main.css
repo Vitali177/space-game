@@ -4,6 +4,105 @@ body {
 }
 
 x3d {
+  position: relative;
+  z-index: 1;
   width: 100vw;
   height: 100vh;
+  display: block;
 }
+
+.blackhole { pointer-events: none; }
+
+.blackhole-core { pointer-events: none; }
+
+#blackhole-glow {
+  filter: drop-shadow(0 0 24px rgba(255,255,255,0.95))
+          drop-shadow(0 0 58px rgba(200,220,255,0.6));
+  will-change: opacity, transform, filter;
+  animation: bh-glow-pulse 2.6s ease-in-out infinite;
+  opacity: 0.92;
+}
+
+#bh-lens shape, #bh-lens {
+  filter: blur(1px) drop-shadow(0 0 8px rgba(255,255,255,0.8));
+  pointer-events: none;
+}
+
+.blackhole-disk shape, .blackhole-disk {
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(255,160,80,0.5));
+}
+
+@keyframes bh-glow-pulse {
+  0%   { opacity: 0.88; transform: scale(1); filter: drop-shadow(0 0 18px rgba(255,255,255,0.9)) drop-shadow(0 0 40px rgba(200,220,255,0.5)); }
+  50%  { opacity: 0.98; transform: scale(1.02); filter: drop-shadow(0 0 28px rgba(255,255,255,1)) drop-shadow(0 0 60px rgba(200,220,255,0.7)); }
+  100% { opacity: 0.88; transform: scale(1); filter: drop-shadow(0 0 18px rgba(255,255,255,0.9)) drop-shadow(0 0 40px rgba(200,220,255,0.5)); }
+}
+
+#space {
+  position: fixed;
+  inset: 0;
+  z-index: 0; /* behind x3d */
+  background-color: #000;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(120,180,255,0.10), transparent 10%),
+    radial-gradient(circle at 70% 30%, rgba(255,180,150,0.08), transparent 12%),
+    radial-gradient(circle at 40% 75%, rgba(200,120,255,0.06), transparent 18%),
+    url("https://upload.wikimedia.org/wikipedia/commons/0/02/Starfield.png");
+  background-size: cover, cover, cover, auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 1;
+  pointer-events: none;
+}
+
+#space::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(white 1px, rgba(255,255,255,0) 1.5px),
+    radial-gradient(white 0.8px, rgba(255,255,255,0) 1.4px);
+  background-size: 120px 120px, 290px 290px;
+  opacity: 0.8;
+  mix-blend-mode: screen;
+  animation: star-slow-drift 60s linear infinite;
+}
+
+/* very slow subtle parallax-like drift */
+@keyframes star-slow-drift {
+  from { transform: translate3d(0,0,0); }
+  to   { transform: translate3d(-60px,20px,0); }
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8));
+  color: #fff;
+}
+
+.modal-inner {
+  width: 360px;
+  max-width: 92%;
+  background: rgba(10,10,12,0.95);
+  padding: 18px;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  font-family: sans-serif;
+}
+
+.modal .submit-row { display:flex; gap:8px; margin:10px 0; }
+.modal .score-name { flex:1; padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color:#fff; }
+.modal button { padding:8px 10px; border-radius:4px; border:none; background:#2a8; color:#001; cursor:pointer; }
+.modal .close-popup { background: rgba(255,255,255,0.08); color:#fff; }
+
+.leaderboard { margin-top:12px; max-height:220px; overflow:auto; }
+.leader-item { display:flex; justify-content:space-between; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.leader-name { font-weight:600; }
+.leader-score { opacity:0.95; }
