@@ -3,38 +3,14 @@ import { Mongo } from 'meteor/mongo';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { check } from 'meteor/check';
 import { Template } from 'meteor/templating';
-
-const PLANETS = [
-  { id: 'mercury', name: 'Mercury', color: '0.55 0.50 0.45', radius: 0.18, hasRing: false, points: 1 },
-  { id: 'venus', name: 'Venus', color: '0.85 0.65 0.35', radius: 0.22, hasRing: false, points: 1 },
-  { id: 'earth', name: 'Earth', color: '0.18 0.45 0.9', radius: 0.26, hasRing: false, points: 2 },
-  { id: 'mars', name: 'Mars', color: '0.85 0.35 0.32', radius: 0.20, hasRing: false, points: 1 },
-  { id: 'jupiter', name: 'Jupiter', color: '0.95 0.8 0.65', radius: 0.70, hasRing: false, points: 4 },
-  { id: 'saturn', name: 'Saturn', color: '0.95 0.9 0.75', radius: 0.60, hasRing: true, ringColor: '0.85 0.7 0.5', ringScale: 2.2, points: 4 },
-  { id: 'uranus', name: 'Uranus', color: '0.4 0.85 0.9', radius: 0.38, hasRing: true, ringColor: '0.7 0.8 0.9', ringScale: 1.6, points: 3 },
-  { id: 'neptune', name: 'Neptune', color: '0.15 0.4 0.95', radius: 0.36, hasRing: false, points: 3 },
-  { id: 'pluto', name: 'Pluto', color: '0.65 0.45 0.35', radius: 0.16, hasRing: false, points: 1 }
-];
-
-/*
-Important notes
-
-1) this Meteor project includes 2 special packages
-- insecure: allows the client to write data (meaning that you don't need Meteor methods to write data to the database)
-- autopublish: allows the client to access all server data without need of a publication/subscription
-
-2) you only need to look at main.js and main.html files to understand the code.
-
-3) your goal: suggest and implement a game or interactive feature using this base. 
-   During the interview, we will review your implementation and may ask you to extend or modify it.
-*/
+import { CLIENT_EVENTS, GAME_DURATION_SECONDS, PLANETS, SERVER_EVENTS, SPAWN_TARGETS_COUNT } from './config';
 
 export const Scores = new Mongo.Collection('scores');
 
 if (Meteor.isClient) {
   Template.world.onCreated(function () {
     this.score = new ReactiveVar(0);
-    this.timeLeft = new ReactiveVar(30);
+    this.timeLeft = new ReactiveVar(GAME_DURATION_SECONDS);
     this.showPopup = new ReactiveVar(false);
     this._gameTimer = null;
     this.finalScore = 0;
@@ -53,8 +29,9 @@ if (Meteor.isClient) {
   });
 
   Template.world.events({
-    'mouseup .target' (event, instance) {
+    [CLIENT_EVENTS.MOUSEUP_TARGET] (event, instance) {
       event.preventDefault();
+
       const targetEl = event.currentTarget;
       const points = Number(targetEl.getAttribute('data-points') || 1);
       instance.score.set(instance.score.get() + points);
@@ -62,19 +39,19 @@ if (Meteor.isClient) {
       if (targetEl.parentNode) targetEl.parentNode.removeChild(targetEl);
 
       // re-spawn
-      if (document.querySelectorAll('.target').length === 0 && instance.timeLeft.get() > 0) {
-        spawnTargets(6);
+      if (!document.querySelectorAll('.target').length && instance.timeLeft.get() > 0) {
+        spawnTargets(SPAWN_TARGETS_COUNT);
       }
     },
 
-    'click .start-game' (event, instance) {
+    [CLIENT_EVENTS.START_GAME] (event, instance) {
       event.preventDefault();
       if (instance._gameTimer) return;
 
       instance.score.set(0);
-      instance.timeLeft.set(30);
+      instance.timeLeft.set(GAME_DURATION_SECONDS);
 
-      spawnTargets(6);
+      spawnTargets(SPAWN_TARGETS_COUNT);
 
       instance._gameTimer = Meteor.setInterval(() => {
         const t = instance.timeLeft.get() - 1;
@@ -89,7 +66,7 @@ if (Meteor.isClient) {
       }, 1000);
     },
 
-    'click .stop-game' (event, instance) {
+    [CLIENT_EVENTS.STOP_GAME] (event, instance) {
       event.preventDefault();
       if (instance._gameTimer) {
         Meteor.clearInterval(instance._gameTimer);
@@ -100,10 +77,11 @@ if (Meteor.isClient) {
       document.querySelectorAll('.target').forEach(el => el.remove());
     },
 
-    'click .submit-score' (event, instance) {
+    [CLIENT_EVENTS.SUBMIT_SCORE] (event, instance) {
       event.preventDefault();
+
       const input = instance.$('.score-name');
-      if (!input || input.length === 0) return;
+      if (!input || !input.length) return;
 
       const name = String(input.val() || '').trim().substring(0, 40);
       const score = Number(instance.score.get() || 0);
@@ -113,7 +91,7 @@ if (Meteor.isClient) {
         return;
       }
 
-      Meteor.call('scores.insert', name, score, (err) => {
+      Meteor.call(SERVER_EVENTS.INSERT_SCORES, name, score, (err) => {
         if (err) {
           console.error('Failed to save score', err);
           alert('Could not save score: ' + (err.reason || err.message));
@@ -123,7 +101,7 @@ if (Meteor.isClient) {
       });
     },
 
-    'click .close-popup' (event, instance) {
+    [CLIENT_EVENTS.CLOSE_POPUP] (event, instance) {
       event.preventDefault();
       instance.showPopup.set(false);
     }
@@ -203,11 +181,14 @@ if (Meteor.isClient) {
     }
 
     inst._bhAnimFrame = requestAnimationFrame(animate);
+  });
 
-    this.onDestroyed(() => {
-      if (inst._bhAnimFrame) cancelAnimationFrame(inst._bhAnimFrame);
+  Template.world.onDestroyed(function () {
+    const inst = this;
+    if (inst._bhAnimFrame) {
+      cancelAnimationFrame(inst._bhAnimFrame);
       inst._bhAnimFrame = null;
-    });
+    }
   });
 }
 
@@ -217,11 +198,11 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    async 'scores.insert' (name, score) {
+    async [SERVER_EVENTS.INSERT_SCORES] (name, score) {
       check(name, String);
       check(score, Number);
 
-      if (name.length === 0 || name.length > 40) {
+      if (!name.length || name.length > 40) {
         throw new Meteor.Error('invalid-name', 'Name must be 1-40 characters');
       }
 
